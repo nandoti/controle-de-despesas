@@ -14,26 +14,22 @@ let transactions =
   localStorage.getItem("transactions") !== null ? localStorageTransactions : [];
 
 const removeTransaction = (ID) => {
-  transactions = transactions.filter(
-    (transaction) => transaction.id !== ID
-  );
+  transactions = transactions.filter((transaction) => transaction.id !== ID);
   updateLocalStorage();
   init();
 };
 
-const addTransactionIntoDOM = (transaction) => {
-  const operator = transaction.amount < 0 ? "-" : "+";
-  const CSSClass = transaction.amount < 0 ? "minus" : "plus";
-  const amountWithouOperator = Math.abs(transaction.amount);
+const addTransactionIntoDOM = ({ amount, name, id }) => {
+  const operator = amount < 0 ? "-" : "+";
+  const CSSClass = amount < 0 ? "minus" : "plus";
+  const amountWithouOperator = Math.abs(amount);
   const li = document.createElement("li");
 
   li.classList.add(CSSClass);
   li.innerHTML = `
-    ${transaction.name} 
+    ${name} 
     <span>${operator} R$ ${amountWithouOperator}</span>
-    <button class="delete-btn" onclick="removeTransaction(${transaction.id})">
-    x
-    </button>
+    <button class="delete-btn" onclick="removeTransaction(${id})">x</button>
     `;
 
   transactionsUl.append(li);
@@ -41,22 +37,29 @@ const addTransactionIntoDOM = (transaction) => {
 
 // Transações
 
-const updateBalanceValues = () => {
-  const transactionAmounts = transactions.map(
-    (transaction) => transaction.amount
-  );
-  const total = transactionAmounts
-    .reduce((accumulator, transaction) => accumulator + transaction, 0)
-    .toFixed(2);
-  const income = transactionAmounts
-    .filter((value) => value > 0)
-    .reduce((accumulator, value) => accumulator + value, 0)
-    .toFixed(2);
-  const expense = Math.abs(
+const getExpenses = (transactionAmounts) =>
+  Math.abs(
     transactionAmounts
       .filter((value) => value < 0)
       .reduce((accumulator, value) => accumulator + value, 0)
   ).toFixed(2);
+
+const getIncome = (transactionAmounts) =>
+  transactionAmounts
+    .filter((value) => value > 0)
+    .reduce((accumulator, value) => accumulator + value, 0)
+    .toFixed(2);
+
+const GetTotal = (transactionAmounts) =>
+  transactionAmounts
+    .reduce((accumulator, transaction) => accumulator + transaction, 0)
+    .toFixed(2);
+
+const updateBalanceValues = () => {
+  const transactionAmounts = transactions.map(({ amount }) => amount);
+  const total = GetTotal(transactionAmounts);
+  const income = getIncome(transactionAmounts);
+  const expense = getExpenses(transactionAmounts);
 
   balanceDisplay.textContent = `R$ ${total}`;
   incomeDisplay.textContent = `R$ ${income}`;
@@ -71,36 +74,45 @@ const init = () => {
 
 init();
 
-const updateLocalStorage =() => {
-  localStorage.setItem('transactions', JSON.stringify(transactions))
-}
+const updateLocalStorage = () => {
+  localStorage.setItem("transactions", JSON.stringify(transactions));
+};
 
 //Função para ID aleatórios
 
-const generateID = () => Math.round(Math.random() * 1000)
+const generateID = () => Math.round(Math.random() * 1000);
 
-//Adicionar transação
+const addToTransactionsArray = (transactionName, transactionAmount) => {
+  transactions.push({
+    id: generateID(),
+    name: transactionName,
+    amount: Number(transactionAmount),
+  });
+};
 
-form.addEventListener("submit", (ev) => {
+const cleanInputs = () => {
+  inputTransactionName.value = "";
+  inputTransactionAmount.value = "";
+};
+
+const handleFormSubmit = (ev) => {
   ev.preventDefault();
 
   const transactionName = inputTransactionName.value.trim();
   const transactionAmount = inputTransactionAmount.value.trim();
 
-  if (transactionName === "" || transactionAmount === "") {
+  const isSomeInpitEmpty = transactionName === "" || transactionAmount === "";
+
+  if (isSomeInpitEmpty) {
     alert("Por favor, preencha todos os campos");
     return;
   }
-  const transaction = {
-    id: generateID(),
-    name: transactionName,
-    amount: Number(transactionAmount)
-  };
+  addToTransactionsArray(transactionName, transactionAmount);
+  init();
+  updateLocalStorage();
+  cleanInputs();
+};
 
-  transactions.push(transaction)
-  init()
-  updateLocalStorage()
+//Adicionar transação
 
-  inputTransactionName.value = "";
-  inputTransactionAmount.value = "";
-});
+form.addEventListener("submit", handleFormSubmit);
